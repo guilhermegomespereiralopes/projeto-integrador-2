@@ -23,4 +23,4 @@ RUN mkdir -p /data
 
 EXPOSE 3000
 
-CMD ["node", "index.js"]
+CMD ["npm", "start"]
