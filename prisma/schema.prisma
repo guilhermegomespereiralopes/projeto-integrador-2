@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id       String   @id @default(uuid())
+  email    String   @unique
+  senha    String
+  criadoEm DateTime @default(now())
+  pedidos  Pedido[]
+}
+
+model OpcaoProduto {
+  id             String       @id @default(uuid())
+  nome           String
+  tipo           String // 'MASSA' ou 'COBERTURA'
+  precoAdicional Float        @default(0.0)
+  ativo          Boolean      @default(true)
+  itemMassa      ItemPedido[] @relation("MassaRelation")
+  itemCob1       ItemPedido[] @relation("Cob1Relation")
+  itemCob2       ItemPedido[] @relation("Cob2Relation")
+}
+
+model Pedido {
+  id         String       @id @default(uuid())
+  usuarioId  String
+  usuario    Usuario      @relation(fields: [usuarioId], references: [id])
+  status     String       @default("CARRINHO")
+  cepEntrega String?
+  valorFrete Float        @default(0.0)
+  valorTotal Float        @default(0.0)
+  criadoEm   DateTime     @default(now())
+  itens      ItemPedido[]
+  pagamento  Pagamento?
+}
+
+model ItemPedido {
+  id            String        @id @default(uuid())
+  pedidoId      String
+  pedido        Pedido        @relation(fields: [pedidoId], references: [id])
+  massaId       String
+  massa         OpcaoProduto  @relation("MassaRelation", fields: [massaId], references: [id])
+  cobertura1Id  String?
+  cobertura1    OpcaoProduto? @relation("Cob1Relation", fields: [cobertura1Id], references: [id])
+  cobertura2Id  String?
+  cobertura2    OpcaoProduto? @relation("Cob2Relation", fields: [cobertura2Id], references: [id])
+  quantidade    Int
+  precoUnitario Float
+}
+
+model Pagamento {
+  id        String   @id @default(uuid())
+  pedidoId  String   @unique
+  pedido    Pedido   @relation(fields: [pedidoId], references: [id])
+  metodo    String   @default("PIX")
+  codigoPix String
+  status    String   @default("PENDENTE")
+  expiraEm  DateTime
+  criadoEm  DateTime @default(now())
+}

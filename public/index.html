@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Grão & Glacê | MVP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+    ></script>
+    <style>
+      body {
+        background-color: #fdf8f2;
+        color: #4a2e1b;
+      }
+      .btn-primary {
+        background-color: #c06c2c;
+        color: #fff;
+      }
+      .btn-primary:hover {
+        background-color: #9e531f;
+      }
+    </style>
+  </head>
+  <body
+    class="min-h-screen flex flex-col font-sans"
+    x-data="app()"
+    x-init="init()"
+  >
+    <!-- Header / Navigation -->
+    <header
+      class="bg-white border-b border-amber-100 shadow-sm sticky top-0 z-50"
+    >
+      <div class="max-w-xl mx-auto px-4 py-3 flex justify-between items-center">
+        <h1
+          class="text-xl font-bold tracking-tight text-amber-900 cursor-pointer"
+          @click="token ? currentView = 'customizer' : currentView = 'auth'"
+        >
+          ☕ Grão & Glacê
+        </h1>
+        <template x-if="token">
+          <div class="flex items-center gap-3">
+            <button
+              @click="currentView = 'cart'"
+              class="relative font-medium text-amber-900 text-sm flex items-center gap-1"
+            >
+              🛒 Carrinho
+              <span
+                x-show="cart.length > 0"
+                class="bg-amber-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full"
+                x-text="cart.reduce((a, b) => a + b.quantidade, 0)"
+              ></span>
+            </button>
+            <button
+              @click="logout()"
+              class="text-xs text-red-600 hover:underline"
+            >
+              Sair
+            </button>
+          </div>
+        </template>
+      </div>
+    </header>
+
+    <main class="flex-1 max-w-xl w-full mx-auto p-4">
+      <!-- 1. AUTH SCREEN (US001 / US002) -->
+      <section
+        x-show="currentView === 'auth'"
+        class="bg-white p-6 rounded-2xl shadow-sm border border-amber-100"
+      >
+        <div class="text-center mb-6">
+          <h2
+            class="text-2xl font-bold text-amber-950"
+            x-text="isRegister ? 'Criar Conta' : 'Bem-vindo de volta'"
+          ></h2>
+          <p class="text-xs text-amber-700 mt-1">
+            Café especial. Cupcake do seu jeito.
+          </p>
+        </div>
+
+        <form @submit.prevent="handleAuth()" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-amber-900 mb-1"
+              >E-mail</label
+            >
+            <input
+              type="email"
+              x-model="authForm.email"
+              required
+              class="w-full px-3 py-2 border rounded-xl text-sm outline-amber-600"
+              placeholder="seu@email.com"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-amber-900 mb-1"
+              >Senha (mín. 8 caracteres)</label
+            >
+            <input
+              type="password"
+              x-model="authForm.senha"
+              required
+              minlength="8"
+              class="w-full px-3 py-2 border rounded-xl text-sm outline-amber-600"
+              placeholder="••••••••"
+            />
+          </div>
+
+          <p
+            x-show="authError"
+            class="text-xs text-red-600 font-medium"
+            x-text="authError"
+          ></p>
+
+          <button
+            type="submit"
+            class="w-full py-2.5 rounded-xl font-semibold btn-primary text-sm shadow"
+            x-text="isRegister ? 'Cadastrar' : 'Entrar'"
+          ></button>
+        </form>
+
+        <div class="mt-4 text-center">
+          <button
+            @click="isRegister = !isRegister; authError = ''"
+            class="text-xs text-amber-800 font-medium hover:underline"
+          >
+            <span
+              x-text="isRegister ? 'Já tem conta? Entrar' : 'Não tem conta? Criar conta'"
+            ></span>
+          </button>
+        </div>
+      </section>
+
+      <!-- 2. CUPCAKE CUSTOMIZER SCREEN (US004) -->
+      <section x-show="currentView === 'customizer'" class="space-y-6">
+        <div class="bg-amber-100/60 p-4 rounded-xl border border-amber-200">
+          <h2 class="font-bold text-amber-950">Monte seu Cupcake</h2>
+          <p class="text-xs text-amber-800">
+            Escolha 1 massa obrigatória e até 2 coberturas.
+          </p>
+        </div>
+
+        <!-- Seed button if catalog is empty -->
+        <template x-if="opcoes.length === 0">
+          <div
+            class="text-center py-6 bg-white rounded-xl border border-dashed border-amber-300"
+          >
+            <p class="text-sm text-amber-800 mb-2">O catálogo está vazio.</p>
+            <button
+              @click="seedCatalog()"
+              class="px-4 py-2 bg-amber-800 text-white text-xs font-semibold rounded-lg"
+            >
+              Popular Catálogo com Opções
+            </button>
+          </div>
+        </template>
+
+        <!-- Massas -->
+        <div x-show="opcoes.length > 0">
+          <h3 class="text-sm font-bold text-amber-900 mb-2">
+            1. Escolha a Massa
+          </h3>
+          <div class="grid grid-cols-2 gap-3">
+            <template
+              x-for="massa in opcoes.filter(o => o.tipo === 'MASSA')"
+              :key="massa.id"
+            >
+              <button
+                @click="builder.massaId = massa.id"
+                :class="builder.massaId === massa.id ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-600' : 'border-gray-200 bg-white'"
+                class="p-3 border rounded-xl text-left transition relative"
+              >
+                <p
+                  class="font-semibold text-sm text-amber-950"
+                  x-text="massa.nome"
+                ></p>
+                <p
+                  class="text-xs text-amber-700 mt-1"
+                  x-text="massa.precoAdicional > 0 ? '+ R$ ' + massa.precoAdicional.toFixed(2) : 'Incluso'"
+                ></p>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <!-- Coberturas -->
+        <div x-show="opcoes.length > 0">
+          <h3 class="text-sm font-bold text-amber-900 mb-2">
+            2. Coberturas (Máx. 2)
+          </h3>
+          <div class="grid grid-cols-2 gap-3">
+            <template
+              x-for="cob in opcoes.filter(o => o.tipo === 'COBERTURA')"
+              :key="cob.id"
+            >
+              <button
+                @click="toggleCobertura(cob.id)"
+                :class="isCoberturaSelected(cob.id) ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-600' : 'border-gray-200 bg-white'"
+                class="p-3 border rounded-xl text-left transition"
+              >
+                <p
+                  class="font-semibold text-sm text-amber-950"
+                  x-text="cob.nome"
+                ></p>
+                <p
+                  class="text-xs text-amber-700 mt-1"
+                  x-text="'+ R$ ' + cob.precoAdicional.toFixed(2)"
+                ></p>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <!-- Price Bar & Add to Cart -->
+        <div
+          x-show="opcoes.length > 0"
+          class="bg-white p-4 rounded-xl border border-amber-100 flex justify-between items-center shadow-sm"
+        >
+          <div>
+            <span class="text-xs text-gray-500 block">Subtotal unitário</span>
+            <span
+              class="text-lg font-bold text-amber-950"
+              x-text="'R$ ' + calculateSubtotal().toFixed(2)"
+            ></span>
+          </div>
+          <button
+            @click="addToCart()"
+            :disabled="!builder.massaId"
+            class="px-5 py-2.5 rounded-xl font-semibold btn-primary text-sm shadow disabled:opacity-50"
+          >
+            Adicionar ao Carrinho
+          </button>
+        </div>
+      </section>
+
+      <!-- 3. CART & CHECKOUT SCREEN (US006 / US008) -->
+      <section x-show="currentView === 'cart'" class="space-y-4">
+        <h2 class="text-xl font-bold text-amber-950">Seu Carrinho</h2>
+
+        <template x-if="cart.length === 0">
+          <div
+            class="bg-white p-8 text-center rounded-xl border border-amber-100"
+          >
+            <p class="text-amber-800 text-sm">Seu carrinho está vazio.</p>
+            <button
+              @click="currentView = 'customizer'"
+              class="mt-3 text-xs font-semibold text-amber-600 hover:underline"
+            >
+              Voltar a personalizar
+            </button>
+          </div>
+        </template>
+
+        <template x-if="cart.length > 0">
+          <div class="space-y-4">
+            <div
+              class="bg-white rounded-xl border border-amber-100 divide-y divide-amber-50"
+            >
+              <template x-for="(item, idx) in cart" :key="idx">
+                <div class="p-3 flex justify-between items-center">
+                  <div>
+                    <p
+                      class="font-bold text-sm text-amber-950"
+                      x-text="getOptionName(item.massaId)"
+                    ></p>
+                    <p
+                      class="text-xs text-amber-700"
+                      x-text="getCoberturasText(item)"
+                    ></p>
+                    <p
+                      class="text-xs font-semibold text-amber-900 mt-1"
+                      x-text="item.quantidade + 'x R$ ' + item.precoUnitario.toFixed(2)"
+                    ></p>
+                  </div>
+                  <button
+                    @click="cart.splice(idx, 1)"
+                    class="text-xs text-red-500 font-medium hover:underline"
+                  >
+                    Remover
+                  </button>
+                </div>
+              </template>
+            </div>
+
+            <!-- CEP / Freight Calculator -->
+            <div
+              class="bg-white p-4 rounded-xl border border-amber-100 space-y-3"
+            >
+              <label class="block text-xs font-semibold text-amber-900"
+                >CEP de Entrega (Cálculo de Frete)</label
+              >
+              <input
+                type="text"
+                x-model="cepEntrega"
+                placeholder="00000-000"
+                maxlength="9"
+                class="w-full px-3 py-2 border rounded-xl text-sm outline-amber-600"
+              />
+
+              <div class="text-xs text-amber-800 space-y-1 pt-2 border-t">
+                <div class="flex justify-between">
+                  <span>Itens:</span>
+                  <span
+                    class="font-semibold"
+                    x-text="'R$ ' + cartTotal().toFixed(2)"
+                  ></span>
+                </div>
+                <div class="flex justify-between">
+                  <span>Frete:</span>
+                  <span
+                    class="font-semibold"
+                    x-text="cepEntrega ? 'R$ 10,00' : 'Informe o CEP'"
+                  ></span>
+                </div>
+                <div
+                  class="flex justify-between text-sm font-bold text-amber-950 pt-1"
+                >
+                  <span>Total:</span>
+                  <span
+                    x-text="'R$ ' + (cartTotal() + (cepEntrega ? 10 : 0)).toFixed(2)"
+                  ></span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              @click="checkoutOrder()"
+              class="w-full py-3 rounded-xl font-semibold btn-primary text-sm shadow"
+            >
+              Finalizar Pedido e Pagar via PIX
+            </button>
+          </div>
+        </template>
+      </section>
+
+      <!-- 4. PIX PAYMENT SCREEN (US009) -->
+      <section
+        x-show="currentView === 'pix'"
+        class="bg-white p-6 rounded-2xl shadow-sm border border-amber-100 text-center space-y-4"
+      >
+        <div
+          class="w-12 h-12 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mx-auto text-xl font-bold"
+        >
+          ⚡
+        </div>
+
+        <div>
+          <h2 class="text-xl font-bold text-amber-950">Pagamento via PIX</h2>
+          <p class="text-xs text-amber-800 mt-1">
+            Copie o código abaixo e pague no app do seu banco.
+          </p>
+        </div>
+
+        <div
+          class="bg-amber-50/50 p-3 rounded-xl border border-amber-200 text-left"
+        >
+          <label
+            class="block text-[10px] font-bold text-amber-900 uppercase tracking-wider mb-1"
+            >Código Copia e Cola</label
+          >
+          <textarea
+            readonly
+            x-text="pixData?.codigoPix"
+            rows="3"
+            class="w-full bg-transparent text-xs font-mono text-amber-950 resize-none outline-none"
+          ></textarea>
+        </div>
+
+        <div
+          class="flex items-center justify-between text-xs text-amber-800 bg-amber-100/50 p-2.5 rounded-lg"
+        >
+          <span>Expira em:</span>
+          <span class="font-bold text-red-600" x-text="pixTimer"></span>
+        </div>
+
+        <button
+          @click="copyPixCode()"
+          class="w-full py-2.5 rounded-xl font-semibold btn-primary text-sm shadow flex items-center justify-center gap-2"
+        >
+          <span>📋 Copiar Código PIX</span>
+        </button>
+
+        <p
+          x-show="copiedMessage"
+          class="text-xs text-emerald-600 font-semibold"
+          x-transition
+        >
+          Código copiado para a área de transferência!
+        </p>
+
+        <button
+          @click="currentView = 'customizer'; cart = []; pixData = null;"
+          class="block w-full text-xs text-amber-800 hover:underline pt-2"
+        >
+          Voltar ao Início
+        </button>
+      </section>
+    </main>
+
+    <script>
+      function app() {
+        return {
+          token: localStorage.getItem("token") || "",
+          currentView: localStorage.getItem("token") ? "customizer" : "auth",
+          isRegister: false,
+          authError: "",
+          authForm: { email: "", senha: "" },
+
+          opcoes: [],
+          builder: { massaId: "", coberturas: [] },
+
+          cart: [],
+          cepEntrega: "",
+
+          pixData: null,
+          pixTimer: "15:00",
+          timerInterval: null,
+          copiedMessage: false,
+
+          async init() {
+            if (this.token) await this.fetchOpcoes();
+          },
+
+          async handleAuth() {
+            this.authError = "";
+            const endpoint = this.isRegister
+              ? "/api/auth/register"
+              : "/api/auth/login";
+
+            try {
+              const res = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(this.authForm),
+              });
+
+              // Trata com segurança caso o servidor responda corpo vazio ou HTML de erro
+              const text = await res.text();
+              const data = text ? JSON.parse(text) : {};
+
+              if (!res.ok) {
+                throw new Error(
+                  data.error ||
+                    `Erro ${res.status}: Não foi possível processar a requisição.`,
+                );
+              }
+
+              if (this.isRegister) {
+                this.isRegister = false;
+                this.authForm.senha = "";
+                alert("Conta criada com sucesso! Faça login.");
+                return;
+              }
+
+              this.token = data.token;
+              localStorage.setItem("token", data.token);
+              await this.fetchOpcoes();
+              this.currentView = "customizer";
+            } catch (err) {
+              this.authError = err.message;
+            }
+          },
+
+          logout() {
+            this.token = "";
+            localStorage.removeItem("token");
+            this.currentView = "auth";
+            this.cart = [];
+          },
+
+          async fetchOpcoes() {
+            try {
+              const res = await fetch("/api/opcoes");
+              this.opcoes = await res.json();
+            } catch (err) {
+              console.error("Erro ao buscar catálogo:", err);
+            }
+          },
+
+          async seedCatalog() {
+            await fetch("/api/opcoes/seed", { method: "POST" });
+            await this.fetchOpcoes();
+          },
+
+          toggleCobertura(id) {
+            const idx = this.builder.coberturas.indexOf(id);
+            if (idx > -1) {
+              this.builder.coberturas.splice(idx, 1);
+            } else {
+              if (this.builder.coberturas.length < 2) {
+                this.builder.coberturas.push(id);
+              }
+            }
+          },
+
+          isCoberturaSelected(id) {
+            return this.builder.coberturas.includes(id);
+          },
+
+          calculateSubtotal() {
+            let price = 5.0; // Base price
+            const massa = this.opcoes.find(
+              (o) => o.id === this.builder.massaId,
+            );
+            if (massa) price += massa.precoAdicional;
+
+            this.builder.coberturas.forEach((cobId) => {
+              const cob = this.opcoes.find((o) => o.id === cobId);
+              if (cob) price += cob.precoAdicional;
+            });
+            return price;
+          },
+
+          addToCart() {
+            if (!this.builder.massaId) return;
+            this.cart.push({
+              massaId: this.builder.massaId,
+              cobertura1Id: this.builder.coberturas[0] || null,
+              cobertura2Id: this.builder.coberturas[1] || null,
+              quantidade: 1,
+              precoUnitario: this.calculateSubtotal(),
+            });
+            this.builder = { massaId: "", coberturas: [] };
+            this.currentView = "cart";
+          },
+
+          cartTotal() {
+            return this.cart.reduce(
+              (sum, item) => sum + item.precoUnitario * item.quantidade,
+              0,
+            );
+          },
+
+          getOptionName(id) {
+            return this.opcoes.find((o) => o.id === id)?.nome || "";
+          },
+
+          getCoberturasText(item) {
+            const names = [];
+            if (item.cobertura1Id)
+              names.push(this.getOptionName(item.cobertura1Id));
+            if (item.cobertura2Id)
+              names.push(this.getOptionName(item.cobertura2Id));
+            return names.length > 0 ? names.join(", ") : "Sem cobertura";
+          },
+
+          async checkoutOrder() {
+            try {
+              const orderRes = await fetch("/api/pedidos", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${this.token}`,
+                },
+                body: JSON.stringify({
+                  itens: this.cart,
+                  cepEntrega: this.cepEntrega,
+                }),
+              });
+              const orderData = await orderRes.json();
+              if (!orderRes.ok) throw new Error(orderData.error);
+
+              const pixRes = await fetch(`/api/pedidos/${orderData.id}/pix`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${this.token}` },
+              });
+              const pixData = await pixRes.json();
+              if (!pixRes.ok) throw new Error(pixData.error);
+
+              this.pixData = pixData;
+              this.currentView = "pix";
+              this.startPixTimer(new Date(pixData.expiraEm));
+            } catch (err) {
+              alert("Erro no checkout: " + err.message);
+            }
+          },
+
+          copyPixCode() {
+            navigator.clipboard.writeText(this.pixData.codigoPix);
+            this.copiedMessage = true;
+            setTimeout(() => (this.copiedMessage = false), 3000);
+          },
+
+          startPixTimer(expirationDate) {
+            if (this.timerInterval) clearInterval(this.timerInterval);
+
+            this.timerInterval = setInterval(() => {
+              const now = new Date();
+              const diff = Math.max(
+                0,
+                Math.floor((expirationDate - now) / 1000),
+              );
+
+              const mins = String(Math.floor(diff / 60)).padStart(2, "0");
+              const secs = String(diff % 60).padStart(2, "0");
+              this.pixTimer = `${mins}:${secs}`;
+
+              if (diff <= 0) clearInterval(this.timerInterval);
+            }, 1000);
+          },
+        };
+      }
+    </script>
+  </body>
+</html>
