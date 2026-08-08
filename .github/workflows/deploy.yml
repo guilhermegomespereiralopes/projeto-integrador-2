@@ -9,6 +9,9 @@ jobs:
   build-deploy:
     name: Build and Deploy JavaScript App
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout Code
@@ -31,6 +34,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Lowercase Repository Name
+        id: repo_slug
+        uses: actions/github-script@v7
+        with:
+          result-encoding: string
+          script: return '${{ github.repository }}'.toLowerCase()
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -45,7 +55,7 @@ jobs:
           dockerfile: Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/${{ github.repository }}:latest
+          tags: ghcr.io/${{ steps.repo_slug.outputs.result }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -83,7 +93,7 @@ jobs:
             PORT=${{ secrets.APP_PORT }}
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             DATABASE_URL=/data/sqlite.db
-            GITHUB_REPOSITORY=${{ github.repository }}
+            GITHUB_REPOSITORY=${{ steps.repo_slug.outputs.result }}
             EOF
             chmod 600 .env
 
@@ -97,7 +107,7 @@ jobs:
           script: |
             echo "${{ secrets.PAT_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
             cd /home/${{ secrets.VPS_USERNAME }}/apps/projeto-integrador-2
-            docker pull ghcr.io/${{ github.repository }}:latest
+            docker pull ghcr.io/${{ steps.repo_slug.outputs.result }}:latest
             docker compose -f docker-compose-prd.yml down --remove-orphans
             docker compose -f docker-compose-prd.yml up -d --force-recreate --remove-orphans
             docker image prune -f
