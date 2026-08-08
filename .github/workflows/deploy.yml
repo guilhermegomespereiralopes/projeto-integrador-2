@@ -23,10 +23,8 @@ jobs:
           node-version: 20
           cache: "npm"
 
-      - name: Install & Build Frontend/Backend
-        run: |
-          npm ci
-          npm run build --if-present
+      - name: Install Dependencies
+        run: npm ci
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -70,15 +68,27 @@ jobs:
             mkdir -p /home/${{ secrets.VPS_USERNAME }}/apps/projeto-integrador-2
             mkdir -p /home/${{ secrets.VPS_USERNAME }}/apps/projeto-integrador-2/data
 
-      - name: Upload docker-compose-prd.yml
-        uses: appleboy/scp-action@v0.1.7
+      - name: Create docker-compose-prd.yml on VPS
+        uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.VPS_IP_ADDRESS }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
-          source: "docker-compose-prd.yml"
-          target: "/home/${{ secrets.VPS_USERNAME }}/apps/projeto-integrador-2/"
+          script: |
+            cd /home/${{ secrets.VPS_USERNAME }}/apps/projeto-integrador-2
+            cat > docker-compose-prd.yml << 'EOF'
+            services:
+              app:
+                image: ghcr.io/${{ steps.repo_slug.outputs.result }}:latest
+                env_file:
+                  - .env
+                ports:
+                  - "${PORT}:3000"
+                volumes:
+                  - ./data:/data
+                restart: always
+            EOF
 
       - name: Create .env file on VPS
         uses: appleboy/ssh-action@v1.0.0
@@ -92,7 +102,7 @@ jobs:
             cat > .env << EOF
             PORT=${{ secrets.APP_PORT }}
             JWT_SECRET=${{ secrets.JWT_SECRET }}
-            DATABASE_URL=/data/sqlite.db
+            DATABASE_URL=file:/data/dev.db
             GITHUB_REPOSITORY=${{ steps.repo_slug.outputs.result }}
             EOF
             chmod 600 .env
