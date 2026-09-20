@@ -46,14 +46,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push Multi-Architecture Docker Image to GHCR
+      - name: Build and push Docker image to GHCR
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
-          dockerfile: Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: ghcr.io/${{ steps.repo_slug.outputs.result }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
