@@ -64,6 +64,13 @@
     </header>
 
     <main class="flex-1 max-w-xl w-full mx-auto p-4">
+      <div
+        x-show="toastMessage"
+        x-transition
+        class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-amber-900 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-lg"
+        x-text="toastMessage"
+      ></div>
+
       <!-- 1. AUTH SCREEN (US001 / US002) -->
       <section
         x-show="currentView === 'auth'"
@@ -131,13 +138,35 @@
         </div>
       </section>
 
-      <!-- 2. CUPCAKE CUSTOMIZER SCREEN (US004) -->
+      <!-- 2. PRODUCT CUSTOMIZER SCREEN (US004) -->
       <section x-show="currentView === 'customizer'" class="space-y-6">
         <div class="bg-amber-100/60 p-4 rounded-xl border border-amber-200">
-          <h2 class="font-bold text-amber-950">Monte seu Cupcake</h2>
-          <p class="text-xs text-amber-800">
-            Escolha 1 massa obrigatória e até 2 coberturas.
-          </p>
+          <h2
+            class="font-bold text-amber-950"
+            x-text="categoria === 'CAFE' ? 'Monte seu Café' : 'Monte seu Cupcake'"
+          ></h2>
+          <p
+            class="text-xs text-amber-800"
+            x-text="categoria === 'CAFE' ? 'Escolha a bebida, o tamanho e um adicional opcional.' : 'Escolha 1 massa obrigatória e até 2 coberturas.'"
+          ></p>
+        </div>
+
+        <!-- Category tabs -->
+        <div class="flex gap-2 bg-white p-1 rounded-xl border border-amber-100">
+          <button
+            @click="setCategoria('CUPCAKE')"
+            :class="categoria === 'CUPCAKE' ? 'btn-primary' : 'text-amber-800'"
+            class="flex-1 py-2 rounded-lg text-sm font-semibold transition"
+          >
+            🧁 Cupcake
+          </button>
+          <button
+            @click="setCategoria('CAFE')"
+            :class="categoria === 'CAFE' ? 'btn-primary' : 'text-amber-800'"
+            class="flex-1 py-2 rounded-lg text-sm font-semibold transition"
+          >
+            ☕ Café
+          </button>
         </div>
 
         <!-- Seed button if catalog is empty -->
@@ -155,61 +184,153 @@
           </div>
         </template>
 
-        <!-- Massas -->
-        <div x-show="opcoes.length > 0">
-          <h3 class="text-sm font-bold text-amber-900 mb-2">
-            1. Escolha a Massa
-          </h3>
-          <div class="grid grid-cols-2 gap-3">
-            <template
-              x-for="massa in opcoes.filter(o => o.tipo === 'MASSA')"
-              :key="massa.id"
-            >
-              <button
-                @click="builder.massaId = massa.id"
-                :class="builder.massaId === massa.id ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-600' : 'border-gray-200 bg-white'"
-                class="p-3 border rounded-xl text-left transition relative"
-              >
-                <p
-                  class="font-semibold text-sm text-amber-950"
-                  x-text="massa.nome"
-                ></p>
-                <p
-                  class="text-xs text-amber-700 mt-1"
-                  x-text="massa.precoAdicional > 0 ? '+ R$ ' + massa.precoAdicional.toFixed(2) : 'Incluso'"
-                ></p>
-              </button>
-            </template>
-          </div>
-        </div>
+        <!-- ===== CUPCAKE FLOW ===== -->
+        <template x-if="categoria === 'CUPCAKE'">
+          <div class="space-y-6">
+            <!-- Massas -->
+            <div x-show="opcoes.length > 0">
+              <h3 class="text-sm font-bold text-amber-900 mb-2">
+                1. Escolha a Massa
+              </h3>
+              <div class="grid grid-cols-2 gap-3">
+                <template
+                  x-for="massa in opcoes.filter(o => o.tipo === 'MASSA')"
+                  :key="massa.id"
+                >
+                  <button
+                    @click="builder.massaId = massa.id"
+                    :class="builder.massaId === massa.id ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-600' : 'border-gray-200 bg-white'"
+                    class="p-3 border rounded-xl text-left transition relative"
+                  >
+                    <p
+                      class="font-semibold text-sm text-amber-950"
+                      x-text="massa.nome"
+                    ></p>
+                    <p
+                      class="text-xs text-amber-700 mt-1"
+                      x-text="massa.precoAdicional > 0 ? '+ R$ ' + massa.precoAdicional.toFixed(2) : 'Incluso'"
+                    ></p>
+                  </button>
+                </template>
+              </div>
+            </div>
 
-        <!-- Coberturas -->
-        <div x-show="opcoes.length > 0">
-          <h3 class="text-sm font-bold text-amber-900 mb-2">
-            2. Coberturas (Máx. 2)
-          </h3>
-          <div class="grid grid-cols-2 gap-3">
-            <template
-              x-for="cob in opcoes.filter(o => o.tipo === 'COBERTURA')"
-              :key="cob.id"
-            >
-              <button
-                @click="toggleCobertura(cob.id)"
-                :class="isCoberturaSelected(cob.id) ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-600' : 'border-gray-200 bg-white'"
-                class="p-3 border rounded-xl text-left transition"
-              >
-                <p
-                  class="font-semibold text-sm text-amber-950"
-                  x-text="cob.nome"
-                ></p>
-                <p
-                  class="text-xs text-amber-700 mt-1"
-                  x-text="'+ R$ ' + cob.precoAdicional.toFixed(2)"
-                ></p>
-              </button>
-            </template>
+            <!-- Coberturas -->
+            <div x-show="opcoes.length > 0">
+              <h3 class="text-sm font-bold text-amber-900 mb-2">
+                2. Coberturas (Máx. 2)
+              </h3>
+              <div class="grid grid-cols-2 gap-3">
+                <template
+                  x-for="cob in opcoes.filter(o => o.tipo === 'COBERTURA')"
+                  :key="cob.id"
+                >
+                  <button
+                    @click="toggleCobertura(cob.id)"
+                    :class="isCoberturaSelected(cob.id) ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-600' : 'border-gray-200 bg-white'"
+                    class="p-3 border rounded-xl text-left transition"
+                  >
+                    <p
+                      class="font-semibold text-sm text-amber-950"
+                      x-text="cob.nome"
+                    ></p>
+                    <p
+                      class="text-xs text-amber-700 mt-1"
+                      x-text="'+ R$ ' + cob.precoAdicional.toFixed(2)"
+                    ></p>
+                  </button>
+                </template>
+              </div>
+            </div>
           </div>
-        </div>
+        </template>
+
+        <!-- ===== CAFÉ FLOW ===== -->
+        <template x-if="categoria === 'CAFE'">
+          <div class="space-y-6">
+            <!-- Tipo de café -->
+            <div x-show="opcoes.length > 0">
+              <h3 class="text-sm font-bold text-amber-900 mb-2">
+                1. Escolha o Café
+              </h3>
+              <div class="grid grid-cols-2 gap-3">
+                <template
+                  x-for="cafe in opcoes.filter(o => o.tipo === 'CAFE_BASE')"
+                  :key="cafe.id"
+                >
+                  <button
+                    @click="builder.massaId = cafe.id"
+                    :class="builder.massaId === cafe.id ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-600' : 'border-gray-200 bg-white'"
+                    class="p-3 border rounded-xl text-left transition relative"
+                  >
+                    <p
+                      class="font-semibold text-sm text-amber-950"
+                      x-text="cafe.nome"
+                    ></p>
+                    <p
+                      class="text-xs text-amber-700 mt-1"
+                      x-text="'R$ ' + cafe.precoAdicional.toFixed(2)"
+                    ></p>
+                  </button>
+                </template>
+              </div>
+            </div>
+
+            <!-- Tamanho -->
+            <div x-show="opcoes.length > 0">
+              <h3 class="text-sm font-bold text-amber-900 mb-2">2. Tamanho</h3>
+              <div class="grid grid-cols-3 gap-3">
+                <template
+                  x-for="tam in opcoes.filter(o => o.tipo === 'TAMANHO')"
+                  :key="tam.id"
+                >
+                  <button
+                    @click="builder.coberturas[0] = tam.id"
+                    :class="builder.coberturas[0] === tam.id ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-600' : 'border-gray-200 bg-white'"
+                    class="p-3 border rounded-xl text-center transition"
+                  >
+                    <p
+                      class="font-semibold text-sm text-amber-950"
+                      x-text="tam.nome"
+                    ></p>
+                    <p
+                      class="text-xs text-amber-700 mt-1"
+                      x-text="tam.precoAdicional > 0 ? '+ R$ ' + tam.precoAdicional.toFixed(2) : 'Incluso'"
+                    ></p>
+                  </button>
+                </template>
+              </div>
+            </div>
+
+            <!-- Adicional (opcional, único) -->
+            <div x-show="opcoes.length > 0">
+              <h3 class="text-sm font-bold text-amber-900 mb-2">
+                3. Adicional (Opcional)
+              </h3>
+              <div class="grid grid-cols-2 gap-3">
+                <template
+                  x-for="ad in opcoes.filter(o => o.tipo === 'ADICIONAL_CAFE')"
+                  :key="ad.id"
+                >
+                  <button
+                    @click="toggleAdicionalCafe(ad.id)"
+                    :class="builder.coberturas[1] === ad.id ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-600' : 'border-gray-200 bg-white'"
+                    class="p-3 border rounded-xl text-left transition"
+                  >
+                    <p
+                      class="font-semibold text-sm text-amber-950"
+                      x-text="ad.nome"
+                    ></p>
+                    <p
+                      class="text-xs text-amber-700 mt-1"
+                      x-text="'+ R$ ' + ad.precoAdicional.toFixed(2)"
+                    ></p>
+                  </button>
+                </template>
+              </div>
+            </div>
+          </div>
+        </template>
 
         <!-- Price Bar & Add to Cart -->
         <div
@@ -225,7 +346,7 @@
           </div>
           <button
             @click="addToCart()"
-            :disabled="!builder.massaId"
+            :disabled="!canAddToCart()"
             class="px-5 py-2.5 rounded-xl font-semibold btn-primary text-sm shadow disabled:opacity-50"
           >
             Adicionar ao Carrinho
@@ -261,7 +382,7 @@
                   <div>
                     <p
                       class="font-bold text-sm text-amber-950"
-                      x-text="getOptionName(item.massaId)"
+                      x-text="itemIcon(item) + ' ' + getOptionName(item.massaId)"
                     ></p>
                     <p
                       class="text-xs text-amber-700"
@@ -407,6 +528,7 @@
           authForm: { email: "", senha: "" },
 
           opcoes: [],
+          categoria: "CUPCAKE",
           builder: { massaId: "", coberturas: [] },
 
           cart: [],
@@ -416,6 +538,7 @@
           pixTimer: "15:00",
           timerInterval: null,
           copiedMessage: false,
+          toastMessage: "",
 
           async init() {
             if (this.token) await this.fetchOpcoes();
@@ -434,7 +557,6 @@
                 body: JSON.stringify(this.authForm),
               });
 
-              // Trata com segurança caso o servidor responda corpo vazio ou HTML de erro
               const text = await res.text();
               const data = text ? JSON.parse(text) : {};
 
@@ -482,6 +604,11 @@
             await this.fetchOpcoes();
           },
 
+          setCategoria(cat) {
+            this.categoria = cat;
+            this.builder = { massaId: "", coberturas: [] };
+          },
+
           toggleCobertura(id) {
             const idx = this.builder.coberturas.indexOf(id);
             if (idx > -1) {
@@ -497,22 +624,35 @@
             return this.builder.coberturas.includes(id);
           },
 
+          toggleAdicionalCafe(id) {
+            this.builder.coberturas[1] =
+              this.builder.coberturas[1] === id ? null : id;
+          },
+
+          canAddToCart() {
+            if (!this.builder.massaId) return false;
+            if (this.categoria === "CAFE" && !this.builder.coberturas[0]) {
+              return false;
+            }
+            return true;
+          },
+
           calculateSubtotal() {
-            let price = 5.0; // Base price
-            const massa = this.opcoes.find(
+            let price = this.categoria === "CAFE" ? 0.0 : 5.0;
+            const principal = this.opcoes.find(
               (o) => o.id === this.builder.massaId,
             );
-            if (massa) price += massa.precoAdicional;
+            if (principal) price += principal.precoAdicional;
 
-            this.builder.coberturas.forEach((cobId) => {
-              const cob = this.opcoes.find((o) => o.id === cobId);
-              if (cob) price += cob.precoAdicional;
+            this.builder.coberturas.forEach((id) => {
+              const extra = this.opcoes.find((o) => o.id === id);
+              if (extra) price += extra.precoAdicional;
             });
             return price;
           },
 
           addToCart() {
-            if (!this.builder.massaId) return;
+            if (!this.canAddToCart()) return;
             this.cart.push({
               massaId: this.builder.massaId,
               cobertura1Id: this.builder.coberturas[0] || null,
@@ -521,7 +661,15 @@
               precoUnitario: this.calculateSubtotal(),
             });
             this.builder = { massaId: "", coberturas: [] };
-            this.currentView = "cart";
+            this.showToast("Item adicionado ao carrinho!");
+          },
+
+          showToast(message) {
+            this.toastMessage = message;
+            clearTimeout(this.toastTimer);
+            this.toastTimer = setTimeout(() => {
+              this.toastMessage = "";
+            }, 1800);
           },
 
           cartTotal() {
@@ -535,13 +683,18 @@
             return this.opcoes.find((o) => o.id === id)?.nome || "";
           },
 
+          itemIcon(item) {
+            const principal = this.opcoes.find((o) => o.id === item.massaId);
+            return principal?.tipo === "CAFE_BASE" ? "☕" : "🧁";
+          },
+
           getCoberturasText(item) {
             const names = [];
             if (item.cobertura1Id)
               names.push(this.getOptionName(item.cobertura1Id));
             if (item.cobertura2Id)
               names.push(this.getOptionName(item.cobertura2Id));
-            return names.length > 0 ? names.join(", ") : "Sem cobertura";
+            return names.length > 0 ? names.join(", ") : "Sem extras";
           },
 
           async checkoutOrder() {
