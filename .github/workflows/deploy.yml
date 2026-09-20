@@ -80,6 +80,7 @@ jobs:
             cat > docker-compose-prd.yml << 'EOF'
             services:
               app:
+                container_name: projeto-integrador-2-app
                 image: ghcr.io/${{ steps.repo_slug.outputs.result }}:latest
                 env_file:
                   - .env
@@ -119,10 +120,13 @@ jobs:
             echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_ACTOR" --password-stdin
             cd /home/${{ secrets.VPS_USERNAME }}/apps/projeto-integrador-2
             docker pull ghcr.io/${{ steps.repo_slug.outputs.result }}:latest
-            docker compose -f docker-compose-prd.yml down --remove-orphans || true
+            docker compose --env-file .env -f docker-compose-prd.yml config
+            docker compose --env-file .env -f docker-compose-prd.yml down --remove-orphans || true
             rm -f /home/${{ secrets.VPS_USERNAME }}/apps/projeto-integrador-2/data/dev.db
             mkdir -p /home/${{ secrets.VPS_USERNAME }}/apps/projeto-integrador-2/data
-            docker compose -f docker-compose-prd.yml up -d --pull always --force-recreate --remove-orphans
+            docker compose --env-file .env -f docker-compose-prd.yml up -d --pull always --force-recreate --remove-orphans --wait
+            docker compose --env-file .env -f docker-compose-prd.yml ps -a
+            docker compose --env-file .env -f docker-compose-prd.yml logs --tail=200 app || true
             docker image prune -f
         env:
           GH_ACTOR: ${{ github.actor }}
