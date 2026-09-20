@@ -119,8 +119,10 @@ jobs:
             echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_ACTOR" --password-stdin
             cd /home/${{ secrets.VPS_USERNAME }}/apps/projeto-integrador-2
             docker pull ghcr.io/${{ steps.repo_slug.outputs.result }}:latest
-            docker compose -f docker-compose-prd.yml down --remove-orphans
-            docker compose -f docker-compose-prd.yml up -d --force-recreate --remove-orphans
+            docker compose -f docker-compose-prd.yml down --remove-orphans || true
+            rm -f /home/${{ secrets.VPS_USERNAME }}/apps/projeto-integrador-2/data/dev.db
+            mkdir -p /home/${{ secrets.VPS_USERNAME }}/apps/projeto-integrador-2/data
+            docker compose -f docker-compose-prd.yml up -d --pull always --force-recreate --remove-orphans
             docker image prune -f
         env:
           GH_ACTOR: ${{ github.actor }}

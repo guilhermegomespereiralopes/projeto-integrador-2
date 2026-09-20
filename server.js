@@ -59,18 +59,35 @@ async function ensureCatalogSeeded() {
     console.log(`🔄 Normalizadas ${legacyRows.length} opções legadas do catálogo.`);
   }
 
-  const existingCount = await prisma.opcaoProduto.count();
+  const existingRows = await prisma.opcaoProduto.findMany();
+  const existingMap = new Map(existingRows.map((row) => [`${row.tipo}:${row.nome}`, row]));
+  let created = 0;
+  let updated = 0;
 
-  if (existingCount > 0) {
-    console.log(`📦 Catálogo já possui ${existingCount} opções. Nenhuma inserção necessária.`);
-    return;
+  for (const item of CATALOGO_SEED) {
+    const key = `${item.tipo}:${item.nome}`;
+    const current = existingMap.get(key);
+
+    if (!current) {
+      await prisma.opcaoProduto.create({ data: item });
+      created += 1;
+      continue;
+    }
+
+    const needsUpdate =
+      current.precoAdicional !== item.precoAdicional ||
+      current.ativo !== true;
+
+    if (needsUpdate) {
+      await prisma.opcaoProduto.update({
+        where: { id: current.id },
+        data: { ...item, ativo: true }
+      });
+      updated += 1;
+    }
   }
 
-  await prisma.opcaoProduto.createMany({
-    data: CATALOGO_SEED,
-  });
-
-  console.log(`✅ Catálogo populado com ${CATALOGO_SEED.length} opções.`);
+  console.log(`✅ Catálogo sincronizado: ${created} criadas, ${updated} atualizadas.`);
 }
 
 
