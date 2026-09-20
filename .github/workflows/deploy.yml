@@ -8,7 +8,7 @@ on:
 jobs:
   build-deploy:
     name: Build and Deploy JavaScript App
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
@@ -25,9 +25,6 @@ jobs:
 
       - name: Install Dependencies
         run: npm ci
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -52,7 +49,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          platforms: linux/amd64
+          platforms: linux/arm64
           tags: ghcr.io/${{ steps.repo_slug.outputs.result }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -115,19 +112,26 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
-          envs: GH_ACTOR,GH_TOKEN
+          envs: GH_ACTOR,GHCR_TOKEN
           script: |
-            echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_ACTOR" --password-stdin
+            set -euo pipefail
+
+            docker logout ghcr.io || true
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GH_ACTOR" --password-stdin
+
             cd /home/${{ secrets.VPS_USERNAME }}/apps/projeto-integrador-2
             docker pull ghcr.io/${{ steps.repo_slug.outputs.result }}:latest
             docker compose --env-file .env -f docker-compose-prd.yml config
             docker compose --env-file .env -f docker-compose-prd.yml down --remove-orphans || true
-            rm -f /home/${{ secrets.VPS_USERNAME }}/apps/projeto-integrador-2/data/dev.db
+
             mkdir -p /home/${{ secrets.VPS_USERNAME }}/apps/projeto-integrador-2/data
+
             docker compose --env-file .env -f docker-compose-prd.yml up -d --pull always --force-recreate --remove-orphans --wait
             docker compose --env-file .env -f docker-compose-prd.yml ps -a
             docker compose --env-file .env -f docker-compose-prd.yml logs --tail=200 app || true
+
+            docker ps -a | grep projeto-integrador-2-app || { echo "Container did not start successfully"; exit 1; }
             docker image prune -f
         env:
-          GH_ACTOR: ${{ github.actor }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_ACTOR: ${{ github.repository_owner }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
