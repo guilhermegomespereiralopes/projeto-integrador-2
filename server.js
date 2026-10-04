@@ -90,7 +90,6 @@ async function ensureCatalogSeeded() {
   console.log(`✅ Catálogo sincronizado: ${created} criadas, ${updated} atualizadas.`);
 }
 
-
 const authMiddleware = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Token não fornecido' });
@@ -103,7 +102,6 @@ const authMiddleware = (req, res, next) => {
     return res.status(401).json({ error: 'Token inválido' });
   }
 };
-
 
 app.post('/api/auth/register', async (req, res) => {
   const { email, senha } = req.body || {};
@@ -136,13 +134,10 @@ app.post('/api/auth/login', async (req, res) => {
   return res.json({ token, usuario: { id: usuario.id, email: usuario.email } });
 });
 
-
-
 app.get('/api/opcoes', async (req, res) => {
   const opcoes = await prisma.opcaoProduto.findMany({ where: { ativo: true } });
   return res.json(opcoes);
 });
-
 
 app.post('/api/opcoes/seed', async (req, res) => {
   const count = await prisma.opcaoProduto.count();
@@ -156,9 +151,6 @@ app.post('/api/opcoes/seed', async (req, res) => {
   const opcoes = await prisma.opcaoProduto.findMany({ where: { ativo: true } });
   return res.json({ message: 'Opções populadas com sucesso', count: opcoes.length });
 });
-
-
-
 
 app.post('/api/pedidos', authMiddleware, async (req, res) => {
   const { itens, cepEntrega } = req.body;
@@ -270,7 +262,6 @@ app.post('/api/pedidos', authMiddleware, async (req, res) => {
 
   return res.status(201).json(pedido);
 });
-
 
 app.post('/api/pedidos/:id/pix', authMiddleware, async (req, res) => {
   const { id } = req.params;
