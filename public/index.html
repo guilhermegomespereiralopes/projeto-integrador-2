@@ -37,7 +37,7 @@
       <div class="max-w-xl mx-auto px-4 py-3 flex justify-between items-center">
         <h1
           class="text-xl font-bold tracking-tight text-amber-900 cursor-pointer"
-          @click="token ? currentView = 'customizer' : currentView = 'auth'"
+          @click="currentView = 'customizer'"
         >
           ☕ Grão & Glacê
         </h1>
@@ -170,6 +170,17 @@
             ☕ Café
           </button>
         </div>
+
+        <template x-if="!token">
+          <div class="flex justify-center pt-1">
+            <button
+              @click="goToAuth()"
+              class="text-xs font-semibold text-amber-800 hover:underline"
+            >
+              Entrar para comprar
+            </button>
+          </div>
+        </template>
 
         <!-- Seed button if catalog is empty -->
         <template x-if="opcoes.length === 0">
@@ -524,7 +535,7 @@
       function app() {
         return {
           token: localStorage.getItem("token") || "",
-          currentView: localStorage.getItem("token") ? "customizer" : "auth",
+          currentView: "customizer",
           isRegister: false,
           authError: "",
           authForm: { email: "", senha: "" },
@@ -543,7 +554,14 @@
           toastMessage: "",
 
           async init() {
-            if (this.token) await this.fetchOpcoes();
+            await this.fetchOpcoes();
+            this.currentView = "customizer";
+          },
+
+          goToAuth() {
+            this.currentView = "auth";
+            this.isRegister = false;
+            this.authError = "";
           },
 
           async handleAuth() {
@@ -580,6 +598,7 @@
               localStorage.setItem("token", data.token);
               await this.fetchOpcoes();
               this.currentView = "customizer";
+              this.authForm = { email: "", senha: "" };
             } catch (err) {
               this.authError = err.message;
             }
@@ -588,8 +607,17 @@
           logout() {
             this.token = "";
             localStorage.removeItem("token");
-            this.currentView = "auth";
+            this.currentView = "customizer";
             this.cart = [];
+          },
+
+          requireAuth() {
+            if (!this.token) {
+              this.goToAuth();
+              this.showToast("Faça login para continuar.");
+              return false;
+            }
+            return true;
           },
 
           async fetchOpcoes() {
@@ -654,6 +682,7 @@
           },
 
           addToCart() {
+            if (!this.requireAuth()) return;
             if (!this.canAddToCart()) return;
             this.cart.push({
               massaId: this.builder.massaId,
@@ -700,6 +729,8 @@
           },
 
           async checkoutOrder() {
+            if (!this.requireAuth()) return;
+
             try {
               const orderRes = await fetch("/api/pedidos", {
                 method: "POST",
