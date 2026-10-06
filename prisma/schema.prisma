@@ -38,6 +38,10 @@ model Pedido {
   usuario    Usuario      @relation(fields: [usuarioId], references: [id])
   status     String       @default("CARRINHO")
   cepEntrega String?
+  logradouro String?
+  bairro     String?
+  cidade     String?
+  uf         String?
   valorFrete Float        @default(0.0)
   valorTotal Float        @default(0.0)
   criadoEm   DateTime     @default(now())

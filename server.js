@@ -104,6 +104,70 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
+class CepLookupError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
+
+function normalizeAddressValue(value) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+async function lookupAddressByCep(value) {
+  const cep = typeof value === 'string' ? value.replace(/\D/g, '') : '';
+  if (!/^\d{8}$/.test(cep)) {
+    throw new CepLookupError(400, 'Informe um CEP válido com 8 dígitos.');
+  }
+
+  let response;
+  try {
+    response = await fetch(`https://viacep.com.br/ws/${cep}/json/`, {
+      signal: AbortSignal.timeout(5000)
+    });
+  } catch {
+    throw new CepLookupError(502, 'Não foi possível consultar o serviço de CEP. Tente novamente.');
+  }
+
+  if (!response.ok) {
+    throw new CepLookupError(502, 'O serviço de CEP está indisponível. Tente novamente.');
+  }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new CepLookupError(502, 'O serviço de CEP retornou uma resposta inválida.');
+  }
+
+  if (!data || typeof data !== 'object') {
+    throw new CepLookupError(502, 'O serviço de CEP retornou uma resposta inválida.');
+  }
+  if (data.erro) {
+    throw new CepLookupError(404, 'CEP não encontrado.');
+  }
+
+  const address = {
+    cep,
+    logradouro: typeof data.logradouro === 'string' ? data.logradouro.trim() : '',
+    bairro: typeof data.bairro === 'string' ? data.bairro.trim() : '',
+    cidade: typeof data.localidade === 'string' ? data.localidade.trim() : '',
+    uf: typeof data.uf === 'string' ? data.uf.trim().toUpperCase() : ''
+  };
+
+  if (!address.cidade || !/^[A-Z]{2}$/.test(address.uf)) {
+    throw new CepLookupError(502, 'O serviço de CEP retornou um endereço incompleto.');
+  }
+
+  return address;
+}
+
 app.post('/api/auth/register', async (req, res) => {
   const { email, senha } = req.body || {};
 
@@ -153,10 +217,49 @@ app.post('/api/opcoes/seed', async (req, res) => {
   return res.json({ message: 'Opções populadas com sucesso', count: opcoes.length });
 });
 
-app.post('/api/pedidos', authMiddleware, async (req, res) => {
-  const { itens, cepEntrega } = req.body;
+app.get('/api/cep/:cep', async (req, res) => {
+  try {
+    return res.json(await lookupAddressByCep(req.params.cep));
+  } catch (error) {
+    if (error instanceof CepLookupError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    console.error('Erro inesperado ao consultar CEP:', error);
+    return res.status(500).json({ error: 'Não foi possível consultar o CEP.' });
+  }
+});
 
-  if (!itens || itens.length === 0) return res.status(400).json({ error: 'Carrinho vazio' });
+app.post('/api/pedidos', authMiddleware, async (req, res) => {
+  const { itens, cepEntrega, enderecoEntrega, confirmarEndereco } = req.body || {};
+
+  if (!Array.isArray(itens) || itens.length === 0) {
+    return res.status(400).json({ error: 'Carrinho vazio' });
+  }
+
+  if (confirmarEndereco !== true || !enderecoEntrega || typeof enderecoEntrega !== 'object') {
+    return res.status(400).json({ error: 'Consulte e confirme o endereço antes de finalizar o pedido.' });
+  }
+
+  let enderecoValidado;
+  try {
+    enderecoValidado = await lookupAddressByCep(cepEntrega);
+  } catch (error) {
+    if (error instanceof CepLookupError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    console.error('Erro inesperado ao validar endereço do pedido:', error);
+    return res.status(500).json({ error: 'Não foi possível validar o endereço do pedido.' });
+  }
+
+  const camposEndereco = ['logradouro', 'bairro', 'cidade', 'uf'];
+  for (const campo of camposEndereco) {
+    if (typeof enderecoEntrega[campo] !== 'string') {
+      return res.status(400).json({ error: 'Os dados do endereço confirmado são inválidos.' });
+    }
+    if (normalizeAddressValue(enderecoEntrega[campo]) !== normalizeAddressValue(enderecoValidado[campo])) {
+      return res.status(400).json({ error: 'O endereço confirmado não corresponde ao CEP informado. Consulte o CEP novamente.' });
+    }
+  }
 
   
   const totalQuantidade = itens.reduce((acc, item) => acc + item.quantidade, 0);
@@ -246,13 +349,18 @@ app.post('/api/pedidos', authMiddleware, async (req, res) => {
   }
 
   
-  const valorFrete = cepEntrega ? 10.0 : 0.0;
+  const cepFormatado = `${enderecoValidado.cep.slice(0, 5)}-${enderecoValidado.cep.slice(5)}`;
+  const valorFrete = 10.0;
   const valorFinal = valorTotalItens + valorFrete;
 
   const pedido = await prisma.pedido.create({
     data: {
       usuarioId: req.userId,
-      cepEntrega,
+      cepEntrega: cepFormatado,
+      logradouro: enderecoValidado.logradouro || null,
+      bairro: enderecoValidado.bairro || null,
+      cidade: enderecoValidado.cidade,
+      uf: enderecoValidado.uf,
       valorFrete,
       valorTotal: valorFinal,
       status: 'AGUARDANDO_PAGAMENTO',

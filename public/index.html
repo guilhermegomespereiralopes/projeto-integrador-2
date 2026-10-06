@@ -454,15 +454,60 @@
               class="bg-white p-4 rounded-xl border border-amber-100 space-y-3"
             >
               <label class="block text-xs font-semibold text-amber-900"
-                >CEP de Entrega (Cálculo de Frete)</label
+                >CEP de Entrega</label
               >
-              <input
-                type="text"
-                x-model="cepEntrega"
-                placeholder="00000-000"
-                maxlength="9"
-                class="w-full px-3 py-2 border rounded-xl text-sm outline-amber-600"
-              />
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  x-model="cepEntrega"
+                  @input="handleCepInput($event)"
+                  inputmode="numeric"
+                  autocomplete="postal-code"
+                  placeholder="00000-000"
+                  maxlength="9"
+                  class="min-w-0 flex-1 px-3 py-2 border rounded-xl text-sm outline-amber-600"
+                />
+                <button
+                  @click="lookupCep()"
+                  :disabled="isLookingUpCep || cepEntrega.replace(/\D/g, '').length !== 8"
+                  class="px-3 py-2 rounded-xl border border-amber-200 text-xs font-semibold text-amber-900 disabled:opacity-50"
+                >
+                  <span x-text="isLookingUpCep ? 'Consultando…' : 'Consultar'"></span>
+                </button>
+              </div>
+
+              <p
+                x-show="cepError"
+                class="text-xs text-red-600 font-medium"
+                x-text="cepError"
+              ></p>
+
+              <template x-if="enderecoEntrega">
+                <div class="space-y-2 rounded-xl bg-amber-50 p-3 text-xs text-amber-950">
+                  <p class="font-semibold">Confira o endereço encontrado:</p>
+                  <p>
+                    <span x-text="enderecoEntrega.logradouro || 'Logradouro não informado'"></span>,
+                    <span x-text="enderecoEntrega.bairro || 'Bairro não informado'"></span>
+                  </p>
+                  <p>
+                    <span x-text="enderecoEntrega.cidade"></span> -
+                    <span x-text="enderecoEntrega.uf"></span>
+                  </p>
+                  <button
+                    x-show="!addressConfirmed"
+                    @click="confirmAddress()"
+                    class="rounded-lg bg-amber-800 px-3 py-2 font-semibold text-white"
+                  >
+                    Confirmar endereço
+                  </button>
+                  <p
+                    x-show="addressConfirmed"
+                    class="font-semibold text-emerald-700"
+                  >
+                    Endereço confirmado
+                  </p>
+                </div>
+              </template>
 
               <div class="text-xs text-amber-800 space-y-1 pt-2 border-t">
                 <div class="flex justify-between">
@@ -476,7 +521,7 @@
                   <span>Frete:</span>
                   <span
                     class="font-semibold"
-                    x-text="cepEntrega ? 'R$ 10,00' : 'Informe o CEP'"
+                    x-text="addressConfirmed ? 'R$ 10,00' : 'Confirme o endereço'"
                   ></span>
                 </div>
                 <div
@@ -484,15 +529,22 @@
                 >
                   <span>Total:</span>
                   <span
-                    x-text="'R$ ' + (cartTotal() + (cepEntrega ? 10 : 0)).toFixed(2)"
+                    x-text="'R$ ' + (cartTotal() + (addressConfirmed ? 10 : 0)).toFixed(2)"
                   ></span>
                 </div>
               </div>
             </div>
 
+            <p
+              x-show="checkoutError"
+              class="text-xs text-red-600 font-medium"
+              x-text="checkoutError"
+            ></p>
             <button
               @click="checkoutOrder()"
+              :disabled="!addressConfirmed || isLookingUpCep"
               class="w-full py-3 rounded-xl font-semibold btn-primary text-sm shadow"
+              :class="(!addressConfirmed || isLookingUpCep) ? 'opacity-50 cursor-not-allowed' : ''"
             >
               Finalizar Pedido e Pagar via PIX
             </button>
@@ -579,6 +631,11 @@
 
           cart: [],
           cepEntrega: "",
+          enderecoEntrega: null,
+          addressConfirmed: false,
+          isLookingUpCep: false,
+          cepError: "",
+          checkoutError: "",
 
           pixData: null,
           pixTimer: "15:00",
@@ -665,6 +722,51 @@
           async seedCatalog() {
             await fetch("/api/opcoes/seed", { method: "POST" });
             await this.fetchOpcoes();
+          },
+
+          handleCepInput(event) {
+            const digits = event.target.value.replace(/\D/g, "").slice(0, 8);
+            this.cepEntrega =
+              digits.length > 5
+                ? `${digits.slice(0, 5)}-${digits.slice(5)}`
+                : digits;
+            this.enderecoEntrega = null;
+            this.addressConfirmed = false;
+            this.cepError = "";
+            this.checkoutError = "";
+          },
+
+          async lookupCep() {
+            const digits = this.cepEntrega.replace(/\D/g, "");
+            if (!/^\d{8}$/.test(digits)) {
+              this.cepError = "Informe um CEP válido com 8 dígitos.";
+              return;
+            }
+
+            this.cepEntrega = `${digits.slice(0, 5)}-${digits.slice(5)}`;
+            this.enderecoEntrega = null;
+            this.addressConfirmed = false;
+            this.cepError = "";
+            this.isLookingUpCep = true;
+
+            try {
+              const response = await fetch(`/api/cep/${digits}`);
+              const data = await response.json();
+              if (!response.ok) {
+                throw new Error(data.error || "Não foi possível consultar o CEP.");
+              }
+              this.enderecoEntrega = data;
+            } catch (error) {
+              this.cepError = error.message;
+            } finally {
+              this.isLookingUpCep = false;
+            }
+          },
+
+          confirmAddress() {
+            if (!this.enderecoEntrega) return;
+            this.addressConfirmed = true;
+            this.checkoutError = "";
           },
 
           setCategoria(cat) {
@@ -783,6 +885,11 @@
 
           async checkoutOrder() {
             if (!this.requireAuth()) return;
+            this.checkoutError = "";
+            if (!this.enderecoEntrega || !this.addressConfirmed) {
+              this.checkoutError = "Consulte e confirme o endereço antes de finalizar o pedido.";
+              return;
+            }
 
             try {
               const orderRes = await fetch("/api/pedidos", {
@@ -794,6 +901,8 @@
                 body: JSON.stringify({
                   itens: this.cart,
                   cepEntrega: this.cepEntrega,
+                  enderecoEntrega: this.enderecoEntrega,
+                  confirmarEndereco: this.addressConfirmed,
                 }),
               });
               const orderData = await orderRes.json();
@@ -810,7 +919,7 @@
               this.currentView = "pix";
               this.startPixTimer(new Date(pixData.expiraEm));
             } catch (err) {
-              alert("Erro no checkout: " + err.message);
+              this.checkoutError = err.message;
             }
           },
 
