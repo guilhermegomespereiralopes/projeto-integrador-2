@@ -21,6 +21,7 @@ model OpcaoProduto {
   nome           String
   tipo           String
   precoAdicional Float        @default(0.0)
+  imagemUrl      String?
   ativo          Boolean      @default(true)
   itemMassa      ItemPedido[] @relation("MassaRelation")
   itemCob1       ItemPedido[] @relation("Cob1Relation")

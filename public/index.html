@@ -215,6 +215,12 @@
                     :class="builder.massaId === massa.id ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-600' : 'border-gray-200 bg-white'"
                     class="p-3 border rounded-xl text-left transition relative"
                   >
+                    <img
+                      :src="massa.imagemUrl || '/images/opcao-padrao.svg'"
+                      :alt="'Foto de ' + massa.nome"
+                      @error="$event.target.src = '/images/opcao-padrao.svg'"
+                      class="w-full h-24 object-cover rounded-lg mb-2"
+                    />
                     <p
                       class="font-semibold text-sm text-amber-950"
                       x-text="massa.nome"
@@ -243,6 +249,12 @@
                     :class="isCoberturaSelected(cob.id) ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-600' : 'border-gray-200 bg-white'"
                     class="p-3 border rounded-xl text-left transition"
                   >
+                    <img
+                      :src="cob.imagemUrl || '/images/opcao-padrao.svg'"
+                      :alt="'Foto de ' + cob.nome"
+                      @error="$event.target.src = '/images/opcao-padrao.svg'"
+                      class="w-full h-24 object-cover rounded-lg mb-2"
+                    />
                     <p
                       class="font-semibold text-sm text-amber-950"
                       x-text="cob.nome"
@@ -276,6 +288,12 @@
                     :class="builder.massaId === cafe.id ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-600' : 'border-gray-200 bg-white'"
                     class="p-3 border rounded-xl text-left transition relative"
                   >
+                    <img
+                      :src="cafe.imagemUrl || '/images/opcao-padrao.svg'"
+                      :alt="'Foto de ' + cafe.nome"
+                      @error="$event.target.src = '/images/opcao-padrao.svg'"
+                      class="w-full h-24 object-cover rounded-lg mb-2"
+                    />
                     <p
                       class="font-semibold text-sm text-amber-950"
                       x-text="cafe.nome"
@@ -302,6 +320,12 @@
                     :class="builder.coberturas[0] === tam.id ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-600' : 'border-gray-200 bg-white'"
                     class="p-3 border rounded-xl text-center transition"
                   >
+                    <img
+                      :src="tam.imagemUrl || '/images/opcao-padrao.svg'"
+                      :alt="'Foto de ' + tam.nome"
+                      @error="$event.target.src = '/images/opcao-padrao.svg'"
+                      class="w-full h-24 object-cover rounded-lg mb-2"
+                    />
                     <p
                       class="font-semibold text-sm text-amber-950"
                       x-text="tam.nome"
@@ -330,6 +354,12 @@
                     :class="builder.coberturas[1] === ad.id ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-600' : 'border-gray-200 bg-white'"
                     class="p-3 border rounded-xl text-left transition"
                   >
+                    <img
+                      :src="ad.imagemUrl || '/images/opcao-padrao.svg'"
+                      :alt="'Foto de ' + ad.nome"
+                      @error="$event.target.src = '/images/opcao-padrao.svg'"
+                      class="w-full h-24 object-cover rounded-lg mb-2"
+                    />
                     <p
                       class="font-semibold text-sm text-amber-950"
                       x-text="ad.nome"

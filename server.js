@@ -10,26 +10,26 @@ const JWT_SECRET = 'secreta_pit2_grao_glace';
 
 const CATALOGO_SEED = [
   
-  { nome: 'Massa Tradicional', tipo: 'MASSA', precoAdicional: 0.0 },
-  { nome: 'Massa Red Velvet', tipo: 'MASSA', precoAdicional: 2.0 },
-  { nome: 'Cobertura de Chocolate', tipo: 'COBERTURA', precoAdicional: 1.5 },
-  { nome: 'Cobertura de Limão Siciliano', tipo: 'COBERTURA', precoAdicional: 1.5 },
-  { nome: 'Cobertura de Leite Ninho', tipo: 'COBERTURA', precoAdicional: 2.0 },
+  { nome: 'Massa Tradicional', tipo: 'MASSA', precoAdicional: 0.0, imagemUrl: '/images/cupcake-tradicional.jpg' },
+  { nome: 'Massa Red Velvet', tipo: 'MASSA', precoAdicional: 2.0, imagemUrl: '/images/cupcake-red-velvet.jpg' },
+  { nome: 'Cobertura de Chocolate', tipo: 'COBERTURA', precoAdicional: 1.5, imagemUrl: '/images/cobertura-chocolate.jpg' },
+  { nome: 'Cobertura de Limão Siciliano', tipo: 'COBERTURA', precoAdicional: 1.5, imagemUrl: '/images/cobertura-limao.jpg' },
+  { nome: 'Cobertura de Leite Ninho', tipo: 'COBERTURA', precoAdicional: 2.0, imagemUrl: '/images/cobertura-leite-ninho.jpg' },
 
   
-  { nome: 'Espresso', tipo: 'CAFE_BASE', precoAdicional: 4.0 },
-  { nome: 'Cappuccino', tipo: 'CAFE_BASE', precoAdicional: 5.5 },
-  { nome: 'Latte', tipo: 'CAFE_BASE', precoAdicional: 5.5 },
-  { nome: 'Mocha', tipo: 'CAFE_BASE', precoAdicional: 6.0 },
+  { nome: 'Espresso', tipo: 'CAFE_BASE', precoAdicional: 4.0, imagemUrl: '/images/espresso.jpg' },
+  { nome: 'Cappuccino', tipo: 'CAFE_BASE', precoAdicional: 5.5, imagemUrl: '/images/cappuccino.jpg' },
+  { nome: 'Latte', tipo: 'CAFE_BASE', precoAdicional: 5.5, imagemUrl: '/images/latte.jpg' },
+  { nome: 'Mocha', tipo: 'CAFE_BASE', precoAdicional: 6.0, imagemUrl: '/images/mocha.jpg' },
 
-  { nome: 'Pequeno', tipo: 'TAMANHO', precoAdicional: 0.0 },
-  { nome: 'Médio', tipo: 'TAMANHO', precoAdicional: 1.0 },
-  { nome: 'Grande', tipo: 'TAMANHO', precoAdicional: 2.0 },
+  { nome: 'Pequeno', tipo: 'TAMANHO', precoAdicional: 0.0, imagemUrl: '/images/espresso.jpg' },
+  { nome: 'Médio', tipo: 'TAMANHO', precoAdicional: 1.0, imagemUrl: '/images/latte.jpg' },
+  { nome: 'Grande', tipo: 'TAMANHO', precoAdicional: 2.0, imagemUrl: '/images/mocha.jpg' },
 
-  { nome: 'Leite Vegetal', tipo: 'ADICIONAL_CAFE', precoAdicional: 1.0 },
-  { nome: 'Xarope de Caramelo', tipo: 'ADICIONAL_CAFE', precoAdicional: 1.0 },
-  { nome: 'Shot Extra', tipo: 'ADICIONAL_CAFE', precoAdicional: 1.5 },
-  { nome: 'Chantilly', tipo: 'ADICIONAL_CAFE', precoAdicional: 1.0 }
+  { nome: 'Leite Vegetal', tipo: 'ADICIONAL_CAFE', precoAdicional: 1.0, imagemUrl: '/images/cappuccino.jpg' },
+  { nome: 'Xarope de Caramelo', tipo: 'ADICIONAL_CAFE', precoAdicional: 1.0, imagemUrl: '/images/latte.jpg' },
+  { nome: 'Shot Extra', tipo: 'ADICIONAL_CAFE', precoAdicional: 1.5, imagemUrl: '/images/espresso.jpg' },
+  { nome: 'Chantilly', tipo: 'ADICIONAL_CAFE', precoAdicional: 1.0, imagemUrl: '/images/mocha.jpg' }
 ];
 
 app.use(cors());
@@ -76,6 +76,7 @@ async function ensureCatalogSeeded() {
 
     const needsUpdate =
       current.precoAdicional !== item.precoAdicional ||
+      current.imagemUrl !== item.imagemUrl ||
       current.ativo !== true;
 
     if (needsUpdate) {
