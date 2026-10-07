@@ -424,8 +424,8 @@
               class="bg-white rounded-xl border border-amber-100 divide-y divide-amber-50"
             >
               <template x-for="(item, idx) in cart" :key="idx">
-                <div class="p-3 flex justify-between items-center">
-                  <div>
+                <div class="p-3 flex justify-between items-center gap-3">
+                  <div class="min-w-0 flex-1">
                     <p
                       class="font-bold text-sm text-amber-950"
                       x-text="itemIcon(item) + ' ' + getOptionName(item.massaId)"
@@ -436,15 +436,38 @@
                     ></p>
                     <p
                       class="text-xs font-semibold text-amber-900 mt-1"
-                      x-text="item.quantidade + 'x R$ ' + item.precoUnitario.toFixed(2)"
+                      x-text="item.quantidade + ' × R$ ' + item.precoUnitario.toFixed(2) + ' = R$ ' + (item.quantidade * item.precoUnitario).toFixed(2)"
                     ></p>
                   </div>
-                  <button
-                    @click="cart.splice(idx, 1)"
-                    class="text-xs text-red-500 font-medium hover:underline"
-                  >
-                    Remover
-                  </button>
+                  <div class="flex shrink-0 flex-col items-end gap-2">
+                    <div class="flex items-center gap-2">
+                      <button
+                        @click="decreaseQuantity(idx)"
+                        :aria-label="'Diminuir quantidade de ' + getOptionName(item.massaId)"
+                        class="h-8 w-8 rounded-lg border border-amber-200 font-bold text-amber-900"
+                      >
+                        −
+                      </button>
+                      <span
+                        class="min-w-5 text-center text-sm font-semibold"
+                        x-text="item.quantidade"
+                      ></span>
+                      <button
+                        @click="increaseQuantity(idx)"
+                        :aria-label="'Aumentar quantidade de ' + getOptionName(item.massaId)"
+                        :disabled="cartQuantity() >= 50"
+                        class="h-8 w-8 rounded-lg border border-amber-200 font-bold text-amber-900 disabled:opacity-40"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <button
+                      @click="removeFromCart(idx)"
+                      class="text-xs text-red-500 font-medium hover:underline"
+                    >
+                      Remover
+                    </button>
+                  </div>
                 </div>
               </template>
             </div>
@@ -839,6 +862,10 @@
           addToCart() {
             if (!this.requireAuth()) return;
             if (!this.canAddToCart()) return;
+            if (this.cartQuantity() >= 50) {
+              this.showToast("O pedido não pode exceder 50 itens.");
+              return;
+            }
             this.cart.push({
               massaId: this.builder.massaId,
               cobertura1Id: this.builder.coberturas[0] || null,
@@ -856,6 +883,30 @@
             this.toastTimer = setTimeout(() => {
               this.toastMessage = "";
             }, 1800);
+          },
+
+          cartQuantity() {
+            return this.cart.reduce((total, item) => total + item.quantidade, 0);
+          },
+
+          increaseQuantity(index) {
+            if (this.cartQuantity() >= 50) {
+              this.showToast("O pedido não pode exceder 50 itens.");
+              return;
+            }
+            this.cart[index].quantidade += 1;
+          },
+
+          decreaseQuantity(index) {
+            if (this.cart[index].quantidade <= 1) {
+              this.removeFromCart(index);
+              return;
+            }
+            this.cart[index].quantidade -= 1;
+          },
+
+          removeFromCart(index) {
+            this.cart.splice(index, 1);
           },
 
           cartTotal() {

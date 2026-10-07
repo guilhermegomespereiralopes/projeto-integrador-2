@@ -236,6 +236,15 @@ app.post('/api/pedidos', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: 'Carrinho vazio' });
   }
 
+  if (itens.some((item) => !item || !Number.isInteger(item.quantidade) || item.quantidade < 1)) {
+    return res.status(400).json({ error: 'A quantidade de cada item deve ser um número inteiro maior que zero.' });
+  }
+
+  const totalQuantidade = itens.reduce((acc, item) => acc + item.quantidade, 0);
+  if (totalQuantidade > 50) {
+    return res.status(400).json({ error: 'O pedido não pode exceder 50 itens no total.' });
+  }
+
   if (confirmarEndereco !== true || !enderecoEntrega || typeof enderecoEntrega !== 'object') {
     return res.status(400).json({ error: 'Consulte e confirme o endereço antes de finalizar o pedido.' });
   }
@@ -262,11 +271,6 @@ app.post('/api/pedidos', authMiddleware, async (req, res) => {
   }
 
   
-  const totalQuantidade = itens.reduce((acc, item) => acc + item.quantidade, 0);
-  if (totalQuantidade > 50) {
-    return res.status(400).json({ error: 'O pedido não pode exceder 50 itens no total.' });
-  }
-
   let valorTotalItens = 0;
   const itensParaCriar = [];
 
