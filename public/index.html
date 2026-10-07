@@ -354,7 +354,7 @@
             <span class="text-xs text-gray-500 block">Subtotal unitário</span>
             <span
               class="text-lg font-bold text-amber-950"
-              x-text="'R$ ' + calculateSubtotal().toFixed(2)"
+              x-text="calculateSubtotal() === null ? 'Selecione as opções' : 'R$ ' + calculateSubtotal().toFixed(2)"
             ></span>
           </div>
           <button
@@ -376,6 +376,9 @@
             class="bg-white p-8 text-center rounded-xl border border-amber-100"
           >
             <p class="text-amber-800 text-sm">Seu carrinho está vazio.</p>
+            <p class="text-sm font-bold text-amber-950 mt-3">
+              Total: R$ 0,00
+            </p>
             <button
               @click="currentView = 'customizer'"
               class="mt-3 text-xs font-semibold text-amber-600 hover:underline"
@@ -664,20 +667,40 @@
             if (this.categoria === "CAFE" && !this.builder.coberturas[0]) {
               return false;
             }
-            return true;
+            return this.calculateSubtotal() !== null;
           },
 
           calculateSubtotal() {
-            let price = this.categoria === "CAFE" ? 0.0 : 5.0;
             const principal = this.opcoes.find(
               (o) => o.id === this.builder.massaId,
             );
-            if (principal) price += principal.precoAdicional;
+            if (!principal) return null;
 
-            this.builder.coberturas.forEach((id) => {
-              const extra = this.opcoes.find((o) => o.id === id);
-              if (extra) price += extra.precoAdicional;
-            });
+            if (this.categoria === "CUPCAKE") {
+              if (principal.tipo !== "MASSA") return null;
+              let price = 5.0 + principal.precoAdicional;
+              this.builder.coberturas.forEach((id) => {
+                const extra = this.opcoes.find((o) => o.id === id);
+                if (extra?.tipo === "COBERTURA") {
+                  price += extra.precoAdicional;
+                }
+              });
+              return price;
+            }
+
+            if (principal.tipo !== "CAFE_BASE") return null;
+            const tamanho = this.opcoes.find(
+              (o) => o.id === this.builder.coberturas[0],
+            );
+            if (tamanho?.tipo !== "TAMANHO") return null;
+
+            let price = principal.precoAdicional + tamanho.precoAdicional;
+            const adicional = this.opcoes.find(
+              (o) => o.id === this.builder.coberturas[1],
+            );
+            if (adicional?.tipo === "ADICIONAL_CAFE") {
+              price += adicional.precoAdicional;
+            }
             return price;
           },
 
